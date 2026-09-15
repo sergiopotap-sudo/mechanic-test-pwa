@@ -1,0 +1,6 @@
+const CACHE='mechanic-test-offline-v1';
+const CORE=['./','./index.html','./styles.css','./manifest.webmanifest','./assets/icon.svg','./data/parts.json'];
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(caches.match(event.request).then(hit=>hit||fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response;}).catch(()=>caches.match('./index.html'))));});
+self.addEventListener('message',event=>{if(event.data?.type==='CACHE_ALL'){event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>event.source?.postMessage({type:'CACHE_ALL_DONE',cached:CORE.length,required:CORE.length})));}if(event.data?.type==='GET_STATUS'){event.waitUntil(caches.open(CACHE).then(async cache=>{let cached=0;for(const u of CORE){if(await cache.match(u))cached++;}event.source?.postMessage({type:'CACHE_STATUS',cached,required:CORE.length,complete:cached===CORE.length});}));}});
